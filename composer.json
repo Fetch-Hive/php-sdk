@@ -1,7 +1,7 @@
 {
   "name": "fetch-hive/sdk",
   "description": "Official PHP SDK for the Fetch Hive API",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "type": "library",
   "license": "MIT",
   "authors": [
