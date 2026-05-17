@@ -14,9 +14,11 @@ use Psr\Http\Message\StreamInterface;
  *
  *   $response = $guzzle->request('POST', '/agent/invoke', ['stream' => true, ...]);
  *   foreach (Streaming::parseSse($response->getBody()) as $event) {
- *       if ($event['type'] === 'delta') {
- *           echo $event['content'];
- *       }
+ *       match ($event['type']) {
+ *           'response' => print($event['response'] ?? ''),
+ *           'usage'    => print("\nUsage: " . json_encode($event['usage'])),
+ *           default    => null,
+ *       };
  *   }
  */
 final class Streaming

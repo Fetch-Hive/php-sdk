@@ -307,8 +307,8 @@ final class ClientTest extends TestCase
 
     private function ssebody(): string
     {
-        return "data: {\"type\":\"delta\",\"content\":\"Hello\"}\n" .
-               "data: {\"type\":\"done\",\"request_id\":\"r1\"}\n" .
+        return "data: {\"type\":\"response\",\"response\":\"Hello\"}\n" .
+               "data: {\"type\":\"usage\",\"request_id\":\"r1\",\"stop_reason\":\"completed\"}\n" .
                "data: [DONE]\n";
     }
 
@@ -322,8 +322,8 @@ final class ClientTest extends TestCase
         $body = $this->requestBody($history);
         $this->assertTrue($body['streaming']);
         $this->assertCount(2, $events);
-        $this->assertSame('delta', $events[0]['type']);
-        $this->assertSame('done', $events[1]['type']);
+        $this->assertSame('response', $events[0]['type']);
+        $this->assertSame('usage', $events[1]['type']);
     }
 
     // S2 — invokeAgentStream sends streaming: true and yields parsed events
@@ -336,7 +336,7 @@ final class ClientTest extends TestCase
         $body = $this->requestBody($history);
         $this->assertTrue($body['streaming']);
         $this->assertCount(2, $events);
-        $this->assertSame('delta', $events[0]['type']);
+        $this->assertSame('response', $events[0]['type']);
     }
 
     // ── Errors ────────────────────────────────────────────────────────────────

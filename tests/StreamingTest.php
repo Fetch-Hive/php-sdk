@@ -23,15 +23,15 @@ final class StreamingTest extends TestCase
     // SSE1 — Parses a clean single-chunk stream into one event per data: line
     public function testSSE1_cleanStream(): void
     {
-        $body = "data: {\"type\":\"delta\",\"content\":\"Hi\"}\n" .
-                "data: {\"type\":\"done\"}\n" .
+        $body = "data: {\"type\":\"response\",\"response\":\"Hi\"}\n" .
+                "data: {\"type\":\"usage\",\"request_id\":\"r1\",\"stop_reason\":\"completed\"}\n" .
                 "data: [DONE]\n";
 
         $events = $this->parse($body);
         $this->assertCount(2, $events);
-        $this->assertSame('delta', $events[0]['type']);
-        $this->assertSame('Hi', $events[0]['content']);
-        $this->assertSame('done', $events[1]['type']);
+        $this->assertSame('response', $events[0]['type']);
+        $this->assertSame('Hi', $events[0]['response']);
+        $this->assertSame('usage', $events[1]['type']);
     }
 
     // SSE2 — Reassembles events from chunks that split mid-line
@@ -39,24 +39,24 @@ final class StreamingTest extends TestCase
     {
         // Feed the stream as if it arrived in multiple reads by building a stream
         // that returns chunks smaller than the line — achieved by controlling read size.
-        $body   = "data: {\"type\":\"delta\",\"content\":\"A\"}\ndata: [DONE]\n";
+        $body   = "data: {\"type\":\"response\",\"response\":\"A\"}\ndata: [DONE]\n";
         $events = $this->parse($body);
 
         $this->assertCount(1, $events);
-        $this->assertSame('A', $events[0]['content']);
+        $this->assertSame('A', $events[0]['response']);
     }
 
     public function testSSE2_multipleDataLinesSplitAcrossBuffer(): void
     {
         // Two events concatenated, simulating a stream that arrives in one blob
-        $body = "data: {\"type\":\"delta\",\"content\":\"X\"}\n" .
-                "data: {\"type\":\"delta\",\"content\":\"Y\"}\n" .
+        $body = "data: {\"type\":\"response\",\"response\":\"X\"}\n" .
+                "data: {\"type\":\"response\",\"response\":\"Y\"}\n" .
                 "data: [DONE]\n";
 
         $events = $this->parse($body);
         $this->assertCount(2, $events);
-        $this->assertSame('X', $events[0]['content']);
-        $this->assertSame('Y', $events[1]['content']);
+        $this->assertSame('X', $events[0]['response']);
+        $this->assertSame('Y', $events[1]['response']);
     }
 
     // SSE3 — Skips non-data lines (comments, blank, event:, id:)
@@ -66,19 +66,19 @@ final class StreamingTest extends TestCase
                 "\n" .
                 "event: message\n" .
                 "id: 42\n" .
-                "data: {\"type\":\"delta\",\"content\":\"X\"}\n" .
+                "data: {\"type\":\"response\",\"response\":\"X\"}\n" .
                 "data: [DONE]\n";
 
         $events = $this->parse($body);
         $this->assertCount(1, $events);
-        $this->assertSame('X', $events[0]['content']);
+        $this->assertSame('X', $events[0]['response']);
     }
 
     // SSE4 — Skips malformed JSON silently without throwing
     public function testSSE4_malformedJsonSkippedSilently(): void
     {
         $body = "data: {broken json here\n" .
-                "data: {\"type\":\"delta\"}\n" .
+                "data: {\"type\":\"response\"}\n" .
                 "data: [DONE]\n";
 
         $events = [];
@@ -91,19 +91,19 @@ final class StreamingTest extends TestCase
 
         $this->assertFalse($threw, 'Malformed JSON should not throw');
         $this->assertCount(1, $events);
-        $this->assertSame('delta', $events[0]['type']);
+        $this->assertSame('response', $events[0]['type']);
     }
 
     // SSE5 — Stops at [DONE]; non-2xx status throws before any events
     public function testSSE5_stopsAtDone(): void
     {
-        $body = "data: {\"type\":\"delta\"}\n" .
+        $body = "data: {\"type\":\"response\"}\n" .
                 "data: [DONE]\n" .
                 "data: {\"type\":\"should_not_appear\"}\n";
 
         $events = $this->parse($body);
         $this->assertCount(1, $events);
-        $this->assertSame('delta', $events[0]['type']);
+        $this->assertSame('response', $events[0]['type']);
     }
 
     public function testSSE5_doneWithSurroundingWhitespace(): void

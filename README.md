@@ -42,9 +42,11 @@ foreach ($client->invokePromptStream(
     deployment: 'my-prompt',
     inputs: ['name' => 'Alice'],
 ) as $chunk) {
-    if ($chunk['type'] === 'delta') {
-        echo $chunk['content'] ?? '';
-    }
+    match ($chunk['type']) {
+        'response' => print($chunk['response'] ?? ''),
+        'usage'    => print("\nUsage: " . json_encode($chunk['usage'])),
+        default    => null,
+    };
 }
 ```
 
@@ -90,9 +92,10 @@ foreach ($client->invokeAgentStream(
     thread_id: 'session-abc123',  // optional — persist conversation history
 ) as $chunk) {
     match ($chunk['type']) {
-        'delta'      => print($chunk['content'] ?? ''),
-        'tool_start' => print("\nCalling tool: " . $chunk['tool_name']),
-        default      => null,
+        'response' => print($chunk['response'] ?? ''),
+        'tool'     => print("\nCalling tool: " . $chunk['tool']),
+        'usage'    => print("\nUsage: " . json_encode($chunk['usage'])),
+        default    => null,
     };
 }
 ```
@@ -136,7 +139,7 @@ $client = new FetchHive();  // picks up FETCH_HIVE_API_KEY automatically
 
 ## Version
 
-0.2.3
+0.2.4
 
 ## License
 

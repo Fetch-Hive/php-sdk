@@ -22,9 +22,12 @@ use FetchHive\Sdk\Exception\ApiException;
  *
  *   // Streaming agent
  *   foreach ($client->invokeAgentStream(['agent' => 'my-agent', 'message' => 'Hello']) as $chunk) {
- *       if ($chunk['type'] === 'delta') {
- *           echo $chunk['content'];
- *       }
+ *       match ($chunk['type']) {
+ *           'response' => print($chunk['response'] ?? ''),
+ *           'tool'     => print("\nCalling tool: " . ($chunk['tool'] ?? '')),
+ *           'usage'    => print("\nUsage: " . json_encode($chunk['usage'])),
+ *           default    => null,
+ *       };
  *   }
  */
 final class FetchHive
