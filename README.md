@@ -2,7 +2,7 @@
 
 Official PHP SDK for the [Fetch Hive](https://fetchhive.com) API — invoke prompts, workflows, and agents with a clean, idiomatic interface.
 
-**Version:** 0.1.8
+**Version:** 0.1.9
 
 ## Requirements
 
