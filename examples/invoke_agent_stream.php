@@ -20,6 +20,7 @@ echo "Streaming agent response:\n\n";
 foreach ($client->invokeAgentStream([
     'agent'   => 'my-agent',
     'message' => 'Tell me a short story about a robot learning PHP',
+    'metadata' => [],
 ]) as $chunk) {
     match ($chunk['type']) {
         'response' => print($chunk['response'] ?? ''),

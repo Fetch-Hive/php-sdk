@@ -28,20 +28,21 @@ Get your API key from the [Fetch Hive dashboard](https://app.fetchhive.com).
 ## Invoke a prompt
 
 ```php
-$result = $client->invokePrompt(
-    deployment: 'my-prompt',
-    inputs: ['name' => 'Alice', 'topic' => 'machine learning'],
-);
+$result = $client->invokePrompt([
+    'deployment' => 'my-prompt',
+    'inputs'     => ['name' => 'Alice', 'topic' => 'machine learning'],
+    'metadata' => [],
+]);
 echo $result['response'];
 ```
 
 ## Invoke a prompt (streaming)
 
 ```php
-foreach ($client->invokePromptStream(
-    deployment: 'my-prompt',
-    inputs: ['name' => 'Alice'],
-) as $chunk) {
+foreach ($client->invokePromptStream([
+    'deployment' => 'my-prompt',
+    'inputs'     => ['name' => 'Alice'],
+]) as $chunk) {
     match ($chunk['type']) {
         'response' => print($chunk['response'] ?? ''),
         'usage'    => print("\nUsage: " . json_encode($chunk['usage'])),
@@ -53,10 +54,11 @@ foreach ($client->invokePromptStream(
 ## Invoke a workflow
 
 ```php
-$run = $client->invokeWorkflow(
-    deployment: 'my-workflow',
-    inputs: ['customer_id' => '42'],
-);
+$run = $client->invokeWorkflow([
+    'deployment' => 'my-workflow',
+    'inputs'     => ['customer_id' => '42'],
+    'metadata' => [],
+]);
 echo $run['status'] . PHP_EOL;
 print_r($run['output']);
 ```
@@ -64,33 +66,38 @@ print_r($run['output']);
 ## Invoke a workflow (async)
 
 ```php
-$run = $client->invokeWorkflow(
-    deployment: 'my-workflow',
-    inputs: ['customer_id' => '42'],
-    async_mode: true,
-    callback_url: 'https://example.com/webhook',
-);
+$run = $client->invokeWorkflow([
+    'deployment'   => 'my-workflow',
+    'inputs'       => ['customer_id' => '42'],
+    'async_mode'   => true,
+    'callback_url' => 'https://example.com/webhook',
+]);
 echo 'Queued: ' . $run['run_id'];
 ```
 
 ## Invoke an agent
 
 ```php
-$reply = $client->invokeAgent(
-    agent: 'my-agent',
-    message: 'What is the weather in London?',
-);
+$reply = $client->invokeAgent([
+    'agent'    => 'my-agent',
+    'message'  => 'What is the weather in London?',
+    'metadata' => [],
+]);
 echo $reply['response'];
 ```
+
+## Metadata
+
+Pass optional `metadata` on prompt, workflow, or agent invokes to attach flat audit fields for log display and filtering. Metadata values must be strings, numbers, booleans, or `null`.
 
 ## Invoke an agent (streaming)
 
 ```php
-foreach ($client->invokeAgentStream(
-    agent: 'my-agent',
-    message: 'What is the weather in London?',
-    thread_id: 'session-abc123',  // optional — persist conversation history
-) as $chunk) {
+foreach ($client->invokeAgentStream([
+    'agent'     => 'my-agent',
+    'message'   => 'What is the weather in London?',
+    'thread_id' => 'session-abc123',  // optional — persist conversation history
+]) as $chunk) {
     match ($chunk['type']) {
         'response' => print($chunk['response'] ?? ''),
         'tool'     => print("\nCalling tool: " . $chunk['tool']),
@@ -103,11 +110,11 @@ foreach ($client->invokeAgentStream(
 ## Multimodal (image) inputs
 
 ```php
-$result = $client->invokeAgent(
-    agent: 'vision-agent',
-    message: 'Describe this image',
-    image_urls: ['https://example.com/photo.jpg'],
-);
+$result = $client->invokeAgent([
+    'agent'      => 'vision-agent',
+    'message'    => 'Describe this image',
+    'image_urls' => ['https://example.com/photo.jpg'],
+]);
 echo $result['response'];
 ```
 
@@ -139,7 +146,7 @@ $client = new FetchHive();  // picks up FETCH_HIVE_API_KEY automatically
 
 ## Version
 
-0.2.5
+0.2.6
 
 ## License
 

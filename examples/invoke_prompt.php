@@ -11,6 +11,7 @@ $client = new FetchHive(['api_key' => getenv('FETCH_HIVE_API_KEY')]);
 $result = $client->invokePrompt([
     'deployment' => 'my-prompt',
     'inputs'     => ['name' => 'Alice', 'topic' => 'PHP'],
+    'metadata' => [],
 ]);
 
 echo $result['response'] . PHP_EOL;
