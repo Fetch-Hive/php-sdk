@@ -1,6 +1,6 @@
 <?php
 /**
- * InvokeWorkflowRequest
+ * MetadataValue
  *
  * PHP version 8.1
  *
@@ -32,7 +32,7 @@ use \ArrayAccess;
 use \FetchHive\Sdk\Generated\ObjectSerializer;
 
 /**
- * InvokeWorkflowRequest Class Doc Comment
+ * MetadataValue Class Doc Comment
  *
  * @category Class
  * @package  FetchHive\Sdk\Generated
@@ -40,7 +40,7 @@ use \FetchHive\Sdk\Generated\ObjectSerializer;
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
  */
-class InvokeWorkflowRequest implements ModelInterface, ArrayAccess, \JsonSerializable
+class MetadataValue implements ModelInterface, ArrayAccess, \JsonSerializable
 {
     public const DISCRIMINATOR = null;
 
@@ -49,7 +49,7 @@ class InvokeWorkflowRequest implements ModelInterface, ArrayAccess, \JsonSeriali
      *
      * @var string
      */
-    protected static $openAPIModelName = 'InvokeWorkflowRequest';
+    protected static $openAPIModelName = 'Metadata_value';
 
     /**
      * Array of property to type mappings. Used for (de)serialization
@@ -57,12 +57,7 @@ class InvokeWorkflowRequest implements ModelInterface, ArrayAccess, \JsonSeriali
      * @var string[]
      */
     protected static $openAPITypes = [
-        'deployment' => 'string',
-        'variant' => 'string',
-        'inputs' => 'array<string,mixed>',
-        'async' => '\FetchHive\Sdk\Generated\Model\AsyncConfig',
-        'user' => 'string',
-        'metadata' => 'array<string,\FetchHive\Sdk\Generated\Model\MetadataValue>'
+        
     ];
 
     /**
@@ -73,12 +68,7 @@ class InvokeWorkflowRequest implements ModelInterface, ArrayAccess, \JsonSeriali
      * @psalm-var array<string, string|null>
      */
     protected static $openAPIFormats = [
-        'deployment' => null,
-        'variant' => null,
-        'inputs' => null,
-        'async' => null,
-        'user' => null,
-        'metadata' => null
+        
     ];
 
     /**
@@ -87,12 +77,7 @@ class InvokeWorkflowRequest implements ModelInterface, ArrayAccess, \JsonSeriali
      * @var boolean[]
      */
     protected static array $openAPINullables = [
-        'deployment' => false,
-        'variant' => false,
-        'inputs' => false,
-        'async' => false,
-        'user' => false,
-        'metadata' => false
+        
     ];
 
     /**
@@ -181,12 +166,7 @@ class InvokeWorkflowRequest implements ModelInterface, ArrayAccess, \JsonSeriali
      * @var string[]
      */
     protected static $attributeMap = [
-        'deployment' => 'deployment',
-        'variant' => 'variant',
-        'inputs' => 'inputs',
-        'async' => 'async',
-        'user' => 'user',
-        'metadata' => 'metadata'
+        
     ];
 
     /**
@@ -195,12 +175,7 @@ class InvokeWorkflowRequest implements ModelInterface, ArrayAccess, \JsonSeriali
      * @var string[]
      */
     protected static $setters = [
-        'deployment' => 'setDeployment',
-        'variant' => 'setVariant',
-        'inputs' => 'setInputs',
-        'async' => 'setAsync',
-        'user' => 'setUser',
-        'metadata' => 'setMetadata'
+        
     ];
 
     /**
@@ -209,12 +184,7 @@ class InvokeWorkflowRequest implements ModelInterface, ArrayAccess, \JsonSeriali
      * @var string[]
      */
     protected static $getters = [
-        'deployment' => 'getDeployment',
-        'variant' => 'getVariant',
-        'inputs' => 'getInputs',
-        'async' => 'getAsync',
-        'user' => 'getUser',
-        'metadata' => 'getMetadata'
+        
     ];
 
     /**
@@ -274,12 +244,6 @@ class InvokeWorkflowRequest implements ModelInterface, ArrayAccess, \JsonSeriali
      */
     public function __construct(?array $data = null)
     {
-        $this->setIfExists('deployment', $data ?? [], null);
-        $this->setIfExists('variant', $data ?? [], '');
-        $this->setIfExists('inputs', $data ?? [], null);
-        $this->setIfExists('async', $data ?? [], null);
-        $this->setIfExists('user', $data ?? [], null);
-        $this->setIfExists('metadata', $data ?? [], null);
     }
 
     /**
@@ -309,9 +273,6 @@ class InvokeWorkflowRequest implements ModelInterface, ArrayAccess, \JsonSeriali
     {
         $invalidProperties = [];
 
-        if ($this->container['deployment'] === null) {
-            $invalidProperties[] = "'deployment' can't be null";
-        }
         return $invalidProperties;
     }
 
@@ -326,168 +287,6 @@ class InvokeWorkflowRequest implements ModelInterface, ArrayAccess, \JsonSeriali
         return count($this->listInvalidProperties()) === 0;
     }
 
-
-    /**
-     * Gets deployment
-     *
-     * @return string
-     */
-    public function getDeployment()
-    {
-        return $this->container['deployment'];
-    }
-
-    /**
-     * Sets deployment
-     *
-     * @param string $deployment Slug of the workflow deployment to invoke.
-     *
-     * @return self
-     */
-    public function setDeployment($deployment)
-    {
-        if (is_null($deployment)) {
-            throw new \InvalidArgumentException('non-nullable deployment cannot be null');
-        }
-        $this->container['deployment'] = $deployment;
-
-        return $this;
-    }
-
-    /**
-     * Gets variant
-     *
-     * @return string|null
-     */
-    public function getVariant()
-    {
-        return $this->container['variant'];
-    }
-
-    /**
-     * Sets variant
-     *
-     * @param string|null $variant Optional variant name to override the default.
-     *
-     * @return self
-     */
-    public function setVariant($variant)
-    {
-        if (is_null($variant)) {
-            throw new \InvalidArgumentException('non-nullable variant cannot be null');
-        }
-        $this->container['variant'] = $variant;
-
-        return $this;
-    }
-
-    /**
-     * Gets inputs
-     *
-     * @return array<string,mixed>|null
-     */
-    public function getInputs()
-    {
-        return $this->container['inputs'];
-    }
-
-    /**
-     * Sets inputs
-     *
-     * @param array<string,mixed>|null $inputs Input variables for the workflow.
-     *
-     * @return self
-     */
-    public function setInputs($inputs)
-    {
-        if (is_null($inputs)) {
-            throw new \InvalidArgumentException('non-nullable inputs cannot be null');
-        }
-        $this->container['inputs'] = $inputs;
-
-        return $this;
-    }
-
-    /**
-     * Gets async
-     *
-     * @return \FetchHive\Sdk\Generated\Model\AsyncConfig|null
-     */
-    public function getAsync()
-    {
-        return $this->container['async'];
-    }
-
-    /**
-     * Sets async
-     *
-     * @param \FetchHive\Sdk\Generated\Model\AsyncConfig|null $async async
-     *
-     * @return self
-     */
-    public function setAsync($async)
-    {
-        if (is_null($async)) {
-            throw new \InvalidArgumentException('non-nullable async cannot be null');
-        }
-        $this->container['async'] = $async;
-
-        return $this;
-    }
-
-    /**
-     * Gets user
-     *
-     * @return string|null
-     */
-    public function getUser()
-    {
-        return $this->container['user'];
-    }
-
-    /**
-     * Sets user
-     *
-     * @param string|null $user Optional opaque caller identifier for audit logging.
-     *
-     * @return self
-     */
-    public function setUser($user)
-    {
-        if (is_null($user)) {
-            throw new \InvalidArgumentException('non-nullable user cannot be null');
-        }
-        $this->container['user'] = $user;
-
-        return $this;
-    }
-
-    /**
-     * Gets metadata
-     *
-     * @return array<string,\FetchHive\Sdk\Generated\Model\MetadataValue>|null
-     */
-    public function getMetadata()
-    {
-        return $this->container['metadata'];
-    }
-
-    /**
-     * Sets metadata
-     *
-     * @param array<string,\FetchHive\Sdk\Generated\Model\MetadataValue>|null $metadata Flat caller-defined metadata stored separately from internal metadata for log display and filtering. Keys must be non-empty strings; values must be strings, numbers, booleans, or null.
-     *
-     * @return self
-     */
-    public function setMetadata($metadata)
-    {
-        if (is_null($metadata)) {
-            throw new \InvalidArgumentException('non-nullable metadata cannot be null');
-        }
-        $this->container['metadata'] = $metadata;
-
-        return $this;
-    }
     /**
      * Returns true if offset exists. False otherwise.
      *

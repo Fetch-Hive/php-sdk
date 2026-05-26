@@ -180,18 +180,29 @@ final class ClientTest extends TestCase
         $this->assertArrayNotHasKey('variant', $body);
         $this->assertArrayNotHasKey('inputs', $body);
         $this->assertArrayNotHasKey('user', $body);
+        $this->assertArrayNotHasKey('metadata', $body);
     }
 
     public function testP3_promptBodyIncludesOptionalFieldsWhenProvided(): void
     {
         $history = [];
         $client  = $this->makeClient([$this->jsonResponse([])], $history);
-        $client->invokePrompt(['deployment' => 'dep', 'variant' => 'v2', 'inputs' => ['k' => 'v'], 'user' => 'u1']);
+        $client->invokePrompt([
+            'deployment'    => 'dep',
+            'variant'       => 'v2',
+            'inputs'        => ['k' => 'v'],
+            'user'          => 'u1',
+            'metadata' => ['customer_id' => 'cus_123', 'trial' => false, 'invoice_count' => 12, 'region' => null],
+        ]);
 
         $body = $this->requestBody($history);
         $this->assertSame('v2', $body['variant']);
         $this->assertSame(['k' => 'v'], $body['inputs']);
         $this->assertSame('u1', $body['user']);
+        $this->assertSame(
+            ['customer_id' => 'cus_123', 'trial' => false, 'invoice_count' => 12, 'region' => null],
+            $body['metadata']
+        );
     }
 
     // ── Workflow ──────────────────────────────────────────────────────────────
@@ -244,6 +255,19 @@ final class ClientTest extends TestCase
         $this->assertArrayNotHasKey('async', $body);
     }
 
+    public function testW4_userMetadataPassesThrough(): void
+    {
+        $history = [];
+        $client  = $this->makeClient([$this->jsonResponse([])], $history);
+        $client->invokeWorkflow([
+            'deployment'    => 'wf',
+            'metadata' => ['customer_id' => 'cus_123', 'invoice_count' => 12],
+        ]);
+
+        $body = $this->requestBody($history);
+        $this->assertSame(['customer_id' => 'cus_123', 'invoice_count' => 12], $body['metadata']);
+    }
+
     // ── Agent ─────────────────────────────────────────────────────────────────
 
     // AG1 — invokeAgent POSTs to /agent/invoke with streaming: false
@@ -279,6 +303,7 @@ final class ClientTest extends TestCase
             'message'    => 'hi',
             'thread_id'  => 't1',
             'user'       => 'u1',
+            'metadata' => ['customer_id' => 'cus_123', 'trial' => false],
             'messages'   => [['role' => 'user', 'content' => 'hi']],
             'image_urls' => ['https://img.example.com/a.png'],
         ]);
@@ -286,6 +311,7 @@ final class ClientTest extends TestCase
         $body = $this->requestBody($history);
         $this->assertSame('t1', $body['thread_id']);
         $this->assertSame('u1', $body['user']);
+        $this->assertSame(['customer_id' => 'cus_123', 'trial' => false], $body['metadata']);
         $this->assertSame([['role' => 'user', 'content' => 'hi']], $body['messages']);
         $this->assertSame(['https://img.example.com/a.png'], $body['image_urls']);
     }
@@ -299,6 +325,7 @@ final class ClientTest extends TestCase
         $body = $this->requestBody($history);
         $this->assertArrayNotHasKey('thread_id', $body);
         $this->assertArrayNotHasKey('user', $body);
+        $this->assertArrayNotHasKey('metadata', $body);
         $this->assertArrayNotHasKey('messages', $body);
         $this->assertArrayNotHasKey('image_urls', $body);
     }
@@ -317,10 +344,14 @@ final class ClientTest extends TestCase
     {
         $history = [];
         $client  = $this->makeClient([$this->sseResponse($this->ssebody())], $history);
-        $events  = iterator_to_array($client->invokePromptStream(['deployment' => 'dep']), false);
+        $events  = iterator_to_array($client->invokePromptStream([
+            'deployment' => 'dep',
+            'metadata' => ['plan' => 'enterprise'],
+        ]), false);
 
         $body = $this->requestBody($history);
         $this->assertTrue($body['streaming']);
+        $this->assertSame(['plan' => 'enterprise'], $body['metadata']);
         $this->assertCount(2, $events);
         $this->assertSame('response', $events[0]['type']);
         $this->assertSame('usage', $events[1]['type']);
@@ -331,10 +362,15 @@ final class ClientTest extends TestCase
     {
         $history = [];
         $client  = $this->makeClient([$this->sseResponse($this->ssebody())], $history);
-        $events  = iterator_to_array($client->invokeAgentStream(['agent' => 'ag', 'message' => 'hi']), false);
+        $events  = iterator_to_array($client->invokeAgentStream([
+            'agent' => 'ag',
+            'message' => 'hi',
+            'metadata' => ['plan' => 'enterprise'],
+        ]), false);
 
         $body = $this->requestBody($history);
         $this->assertTrue($body['streaming']);
+        $this->assertSame(['plan' => 'enterprise'], $body['metadata']);
         $this->assertCount(2, $events);
         $this->assertSame('response', $events[0]['type']);
     }

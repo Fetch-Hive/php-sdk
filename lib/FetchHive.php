@@ -72,7 +72,7 @@ final class FetchHive
     /**
      * Invoke a prompt deployment and return the full response as an associative array.
      *
-     * @param array{deployment: string, variant?: string, inputs?: array<string,mixed>, user?: string} $params
+     * @param array{deployment: string, variant?: string, inputs?: array<string,mixed>, user?: string, metadata?: array<string,string|int|float|bool|null>} $params
      * @return array<string,mixed>
      */
     public function invokePrompt(array $params): array
@@ -87,13 +87,16 @@ final class FetchHive
         if (isset($params['user'])) {
             $body['user'] = $params['user'];
         }
+        if (isset($params['metadata'])) {
+            $body['metadata'] = $params['metadata'];
+        }
         return $this->post('/invoke', $body);
     }
 
     /**
      * Invoke a prompt deployment and stream SSE events.
      *
-     * @param array{deployment: string, variant?: string, inputs?: array<string,mixed>, user?: string} $params
+     * @param array{deployment: string, variant?: string, inputs?: array<string,mixed>, user?: string, metadata?: array<string,string|int|float|bool|null>} $params
      * @return Generator<array<string,mixed>>
      */
     public function invokePromptStream(array $params): Generator
@@ -107,6 +110,9 @@ final class FetchHive
         }
         if (isset($params['user'])) {
             $body['user'] = $params['user'];
+        }
+        if (isset($params['metadata'])) {
+            $body['metadata'] = $params['metadata'];
         }
         yield from $this->postStream('/invoke', $body);
     }
@@ -122,7 +128,8 @@ final class FetchHive
      *   inputs?: array<string,mixed>,
      *   async_mode?: bool,
      *   callback_url?: string,
-     *   user?: string
+     *   user?: string,
+     *   metadata?: array<string,string|int|float|bool|null>
      * } $params
      * @return array<string,mixed>
      */
@@ -137,6 +144,9 @@ final class FetchHive
         }
         if (isset($params['user'])) {
             $body['user'] = $params['user'];
+        }
+        if (isset($params['metadata'])) {
+            $body['metadata'] = $params['metadata'];
         }
         if (!empty($params['async_mode'])) {
             $body['async'] = ['enabled' => true];
@@ -157,6 +167,7 @@ final class FetchHive
      *   message: string,
      *   thread_id?: string,
      *   user?: string,
+     *   metadata?: array<string,string|int|float|bool|null>,
      *   messages?: array<int,array<string,mixed>>,
      *   image_urls?: string[]
      * } $params
@@ -175,6 +186,9 @@ final class FetchHive
         if (isset($params['user'])) {
             $body['user'] = $params['user'];
         }
+        if (isset($params['metadata'])) {
+            $body['metadata'] = $params['metadata'];
+        }
         if (isset($params['messages'])) {
             $body['messages'] = $params['messages'];
         }
@@ -192,6 +206,7 @@ final class FetchHive
      *   message: string,
      *   thread_id?: string,
      *   user?: string,
+     *   metadata?: array<string,string|int|float|bool|null>,
      *   messages?: array<int,array<string,mixed>>,
      *   image_urls?: string[]
      * } $params
@@ -209,6 +224,9 @@ final class FetchHive
         }
         if (isset($params['user'])) {
             $body['user'] = $params['user'];
+        }
+        if (isset($params['metadata'])) {
+            $body['metadata'] = $params['metadata'];
         }
         if (isset($params['messages'])) {
             $body['messages'] = $params['messages'];
