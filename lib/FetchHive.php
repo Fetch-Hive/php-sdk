@@ -90,7 +90,7 @@ final class FetchHive
         if (isset($params['metadata'])) {
             $body['metadata'] = $params['metadata'];
         }
-        return $this->post('/invoke', $body);
+        return $this->post('/prompt/invoke', $body);
     }
 
     /**
@@ -114,7 +114,7 @@ final class FetchHive
         if (isset($params['metadata'])) {
             $body['metadata'] = $params['metadata'];
         }
-        yield from $this->postStream('/invoke', $body);
+        yield from $this->postStream('/prompt/invoke', $body);
     }
 
     // ── Workflow ────────────────────────────────────────────────────────────────
@@ -169,7 +169,10 @@ final class FetchHive
      *   user?: string,
      *   metadata?: array<string,string|int|float|bool|null>,
      *   messages?: array<int,array<string,mixed>>,
-     *   image_urls?: string[]
+     *   image_urls?: string[],
+     *   attachments?: array<int,string|array<string,mixed>>,
+     *   known_artifact_refs?: string[],
+     *   artifact_refs?: string[]
      * } $params
      * @return array<string,mixed>
      */
@@ -192,8 +195,14 @@ final class FetchHive
         if (isset($params['messages'])) {
             $body['messages'] = $params['messages'];
         }
-        if (isset($params['image_urls'])) {
-            $body['image_urls'] = $params['image_urls'];
+        if (isset($params['attachments']) || isset($params['image_urls'])) {
+            $body['attachments'] = $params['attachments'] ?? $params['image_urls'];
+        }
+        if (isset($params['known_artifact_refs'])) {
+            $body['known_artifact_refs'] = $params['known_artifact_refs'];
+        }
+        if (isset($params['artifact_refs'])) {
+            $body['artifact_refs'] = $params['artifact_refs'];
         }
         return $this->post('/agent/invoke', $body);
     }
@@ -208,7 +217,10 @@ final class FetchHive
      *   user?: string,
      *   metadata?: array<string,string|int|float|bool|null>,
      *   messages?: array<int,array<string,mixed>>,
-     *   image_urls?: string[]
+     *   image_urls?: string[],
+     *   attachments?: array<int,string|array<string,mixed>>,
+     *   known_artifact_refs?: string[],
+     *   artifact_refs?: string[]
      * } $params
      * @return Generator<array<string,mixed>>
      */
@@ -231,13 +243,249 @@ final class FetchHive
         if (isset($params['messages'])) {
             $body['messages'] = $params['messages'];
         }
-        if (isset($params['image_urls'])) {
-            $body['image_urls'] = $params['image_urls'];
+        if (isset($params['attachments']) || isset($params['image_urls'])) {
+            $body['attachments'] = $params['attachments'] ?? $params['image_urls'];
+        }
+        if (isset($params['known_artifact_refs'])) {
+            $body['known_artifact_refs'] = $params['known_artifact_refs'];
+        }
+        if (isset($params['artifact_refs'])) {
+            $body['artifact_refs'] = $params['artifact_refs'];
         }
         yield from $this->postStream('/agent/invoke', $body);
     }
 
+    // ── Hive Agent ──────────────────────────────────────────────────────────────
+
+    /**
+     * Start a Hive Agent run asynchronously. Requires a callback URL.
+     *
+     * @param array{
+     *   hive_agent: string,
+     *   objective: string,
+     *   callback_url: string,
+     *   sources?: array<string,mixed>,
+     *   metadata?: array<string,string|int|float|bool|null>
+     * } $params
+     * @return array<string,mixed>
+     */
+    public function invokeHiveAgent(array $params): array
+    {
+        $callbackUrl = $params['callback_url'] ?? '';
+        if ($callbackUrl === '') {
+            throw new \InvalidArgumentException('callback_url is required for Hive Agent invocation');
+        }
+        $body = [
+            'hive_agent' => $params['hive_agent'],
+            'objective'  => $params['objective'],
+            'async'      => ['enabled' => true, 'callback_url' => $callbackUrl],
+        ];
+        if (isset($params['sources'])) {
+            $body['sources'] = $params['sources'];
+        }
+        if (isset($params['metadata'])) {
+            $body['metadata'] = $params['metadata'];
+        }
+        return $this->post('/hive-agent/invoke', $body);
+    }
+
+    // ── Public resources ────────────────────────────────────────────────────────
+
+    /** @return array<string,mixed> */
+    public function getRequest(string $id): array
+    {
+        return $this->request('GET', '/public/requests/' . $id);
+    }
+
+    /** @return array<string,mixed> */
+    public function listKnowledgeBases(string $workspaceId): array
+    {
+        return $this->request('GET', '/public/workspaces/' . $workspaceId . '/knowledge_bases');
+    }
+
+    /** @return array<string,mixed> */
+    public function getKnowledgeBase(string $workspaceId, string $id): array
+    {
+        return $this->request('GET', '/public/workspaces/' . $workspaceId . '/knowledge_bases/' . $id);
+    }
+
+    /**
+     * @param array<string,mixed> $knowledgeBase
+     * @return array<string,mixed>
+     */
+    public function createKnowledgeBase(string $workspaceId, array $knowledgeBase): array
+    {
+        return $this->post('/public/workspaces/' . $workspaceId . '/knowledge_bases', ['knowledge_base' => $knowledgeBase]);
+    }
+
+    /**
+     * @param array<string,mixed> $knowledgeBase
+     * @return array<string,mixed>
+     */
+    public function updateKnowledgeBase(string $workspaceId, string $id, array $knowledgeBase): array
+    {
+        return $this->request('PATCH', '/public/workspaces/' . $workspaceId . '/knowledge_bases/' . $id, ['knowledge_base' => $knowledgeBase]);
+    }
+
+    /** @return array<string,mixed> */
+    public function deleteKnowledgeBase(string $workspaceId, string $id): array
+    {
+        return $this->request('DELETE', '/public/workspaces/' . $workspaceId . '/knowledge_bases/' . $id);
+    }
+
+    /**
+     * @param array<string,mixed> $params
+     * @return array<string,mixed>
+     */
+    public function searchKnowledgeBase(string $workspaceId, string $id, array $params): array
+    {
+        return $this->post('/public/workspaces/' . $workspaceId . '/knowledge_bases/' . $id . '/search', $params);
+    }
+
+    /** @return array<string,mixed> */
+    public function listKnowledgeBaseItems(string $workspaceId, string $knowledgeBaseId): array
+    {
+        return $this->request('GET', '/public/workspaces/' . $workspaceId . '/knowledge_bases/' . $knowledgeBaseId . '/items');
+    }
+
+    /** @return array<string,mixed> */
+    public function getKnowledgeBaseItem(string $workspaceId, string $knowledgeBaseId, string $id): array
+    {
+        return $this->request('GET', '/public/workspaces/' . $workspaceId . '/knowledge_bases/' . $knowledgeBaseId . '/items/' . $id);
+    }
+
+    /**
+     * @param array<string,mixed> $item
+     * @return array<string,mixed>
+     */
+    public function createKnowledgeBaseItem(string $workspaceId, string $knowledgeBaseId, array $item): array
+    {
+        return $this->post('/public/workspaces/' . $workspaceId . '/knowledge_bases/' . $knowledgeBaseId . '/items', ['knowledge_base_item' => $item]);
+    }
+
+    /**
+     * @param array<string,mixed> $item
+     * @return array<string,mixed>
+     */
+    public function updateKnowledgeBaseItem(string $workspaceId, string $knowledgeBaseId, string $id, array $item): array
+    {
+        return $this->request('PATCH', '/public/workspaces/' . $workspaceId . '/knowledge_bases/' . $knowledgeBaseId . '/items/' . $id, ['knowledge_base_item' => $item]);
+    }
+
+    /** @return array<string,mixed> */
+    public function deleteKnowledgeBaseItem(string $workspaceId, string $knowledgeBaseId, string $id): array
+    {
+        return $this->request('DELETE', '/public/workspaces/' . $workspaceId . '/knowledge_bases/' . $knowledgeBaseId . '/items/' . $id);
+    }
+
+    /** @return array<string,mixed> */
+    public function regenerateKnowledgeBaseItem(string $workspaceId, string $knowledgeBaseId, string $id): array
+    {
+        return $this->post('/public/workspaces/' . $workspaceId . '/knowledge_bases/' . $knowledgeBaseId . '/items/' . $id . '/regenerate', []);
+    }
+
+    /** @return array<string,mixed> */
+    public function listAgents(string $workspaceId): array
+    {
+        return $this->request('GET', '/public/workspaces/' . $workspaceId . '/agents');
+    }
+
+    /** @return array<string,mixed> */
+    public function getAgent(string $workspaceId, string $id): array
+    {
+        return $this->request('GET', '/public/workspaces/' . $workspaceId . '/agents/' . $id);
+    }
+
+    /**
+     * @param array<string,mixed> $agent
+     * @return array<string,mixed>
+     */
+    public function createAgent(string $workspaceId, array $agent): array
+    {
+        return $this->post('/public/workspaces/' . $workspaceId . '/agents', ['agent' => $agent]);
+    }
+
+    /**
+     * @param array<string,mixed> $agent
+     * @return array<string,mixed>
+     */
+    public function updateAgent(string $workspaceId, string $id, array $agent): array
+    {
+        return $this->request('PATCH', '/public/workspaces/' . $workspaceId . '/agents/' . $id, ['agent' => $agent]);
+    }
+
+    /** @return array<string,mixed> */
+    public function deleteAgent(string $workspaceId, string $id): array
+    {
+        return $this->request('DELETE', '/public/workspaces/' . $workspaceId . '/agents/' . $id);
+    }
+
+    /** @return array<string,mixed> */
+    public function getAgentChat(string $workspaceId, string $agentId, string $chatId): array
+    {
+        return $this->request('GET', '/public/workspaces/' . $workspaceId . '/agents/' . $agentId . '/chats/' . $chatId);
+    }
+
+    /**
+     * @param array<string,mixed> $chat
+     * @return array<string,mixed>
+     */
+    public function createAgentChat(string $workspaceId, string $agentId, array $chat): array
+    {
+        return $this->post('/public/workspaces/' . $workspaceId . '/agents/' . $agentId . '/chats', ['chat' => $chat]);
+    }
+
+    /**
+     * @param array<string,mixed> $chat
+     * @return array<string,mixed>
+     */
+    public function updateAgentChat(string $workspaceId, string $agentId, string $chatId, array $chat): array
+    {
+        return $this->request('PATCH', '/public/workspaces/' . $workspaceId . '/agents/' . $agentId . '/chats/' . $chatId, ['chat' => $chat]);
+    }
+
+    /** @return array<string,mixed> */
+    public function deleteAgentChat(string $workspaceId, string $agentId, string $chatId): array
+    {
+        return $this->request('DELETE', '/public/workspaces/' . $workspaceId . '/agents/' . $agentId . '/chats/' . $chatId);
+    }
+
+    /** @return array<string,mixed> */
+    public function clearAgentChatMessages(string $workspaceId, string $agentId, string $chatId): array
+    {
+        return $this->request('PATCH', '/public/workspaces/' . $workspaceId . '/agents/' . $agentId . '/chats/' . $chatId . '/clear_messages', []);
+    }
+
+    /** @return array<string,mixed> */
+    public function listAgentChatMessages(string $workspaceId, string $agentId, string $chatId): array
+    {
+        return $this->request('GET', '/public/workspaces/' . $workspaceId . '/agents/' . $agentId . '/chats/' . $chatId . '/messages');
+    }
+
     // ── Private helpers ─────────────────────────────────────────────────────────
+
+    /**
+     * @param array<string,mixed>|null $body
+     * @return array<string,mixed>
+     */
+    private function request(string $method, string $path, ?array $body = null): array
+    {
+        $options = ['headers' => $this->defaultHeaders()];
+        if ($body !== null) {
+            $options['json'] = $body;
+        }
+
+        try {
+            $response = $this->httpClient->request($method, $this->baseUrl . $path, $options);
+        } catch (BadResponseException $e) {
+            $status = $e->getResponse()->getStatusCode();
+            $bodyStr = (string) $e->getResponse()->getBody();
+            throw new ApiException($status, $bodyStr);
+        }
+
+        $decoded = json_decode((string) $response->getBody(), true);
+        return is_array($decoded) ? $decoded : [];
+    }
 
     /**
      * @param array<string,mixed> $body
@@ -245,18 +493,7 @@ final class FetchHive
      */
     private function post(string $path, array $body): array
     {
-        try {
-            $response = $this->httpClient->post($this->baseUrl . $path, [
-                'headers' => $this->defaultHeaders(),
-                'json'    => $body,
-            ]);
-        } catch (BadResponseException $e) {
-            $status = $e->getResponse()->getStatusCode();
-            $bodyStr = (string) $e->getResponse()->getBody();
-            throw new ApiException($status, $bodyStr);
-        }
-
-        return json_decode((string) $response->getBody(), true);
+        return $this->request('POST', $path, $body);
     }
 
     /**

@@ -146,7 +146,7 @@ final class ClientTest extends TestCase
 
     // ── Prompt ────────────────────────────────────────────────────────────────
 
-    // P1 — invokePrompt POSTs to /invoke
+    // P1 — invokePrompt POSTs to /prompt/invoke
     public function testP1_invokePromptEndpoint(): void
     {
         $history = [];
@@ -154,7 +154,7 @@ final class ClientTest extends TestCase
         $client->invokePrompt(['deployment' => 'dep']);
 
         $uri = (string) $history[0]['request']->getUri();
-        $this->assertStringEndsWith('/invoke', $uri);
+        $this->assertStringEndsWith('/prompt/invoke', $uri);
         $this->assertSame('POST', $history[0]['request']->getMethod());
     }
 
@@ -305,7 +305,9 @@ final class ClientTest extends TestCase
             'user'       => 'u1',
             'metadata' => ['customer_id' => 'cus_123', 'trial' => false],
             'messages'   => [['role' => 'user', 'content' => 'hi']],
-            'image_urls' => ['https://img.example.com/a.png'],
+            'attachments' => ['https://img.example.com/a.png'],
+            'known_artifact_refs' => ['11111111-1111-4111-8111-111111111111'],
+            'artifact_refs' => ['11111111-1111-4111-8111-111111111111'],
         ]);
 
         $body = $this->requestBody($history);
@@ -313,7 +315,8 @@ final class ClientTest extends TestCase
         $this->assertSame('u1', $body['user']);
         $this->assertSame(['customer_id' => 'cus_123', 'trial' => false], $body['metadata']);
         $this->assertSame([['role' => 'user', 'content' => 'hi']], $body['messages']);
-        $this->assertSame(['https://img.example.com/a.png'], $body['image_urls']);
+        $this->assertSame(['https://img.example.com/a.png'], $body['attachments']);
+        $this->assertSame($body['known_artifact_refs'], $body['artifact_refs']);
     }
 
     public function testAG3_optionalFieldsAbsentWhenNotProvided(): void
@@ -327,7 +330,145 @@ final class ClientTest extends TestCase
         $this->assertArrayNotHasKey('user', $body);
         $this->assertArrayNotHasKey('metadata', $body);
         $this->assertArrayNotHasKey('messages', $body);
-        $this->assertArrayNotHasKey('image_urls', $body);
+        $this->assertArrayNotHasKey('attachments', $body);
+    }
+
+    // ── Hive Agent ────────────────────────────────────────────────────────────
+
+    public function testHA1HA2_invokeHiveAgentEndpointAndParsedJson(): void
+    {
+        $history = [];
+        $client  = $this->makeClient([$this->jsonResponse([
+            'run_id' => 'run_1',
+            'request_id' => 'req_1',
+            'status' => 'pending',
+            'webhook_secret' => 'whsec_x',
+        ], 202)], $history);
+
+        $result = $client->invokeHiveAgent([
+            'hive_agent'   => 'agt_1',
+            'objective'    => 'Research competitors',
+            'callback_url' => 'https://example.com/cb',
+        ]);
+
+        $uri = (string) $history[0]['request']->getUri();
+        $this->assertStringEndsWith('/hive-agent/invoke', $uri);
+        $this->assertSame('run_1', $result['run_id']);
+        $this->assertSame('whsec_x', $result['webhook_secret']);
+    }
+
+    public function testHA3_asyncBlockAndMissingCallbackUrl(): void
+    {
+        $history = [];
+        $client  = $this->makeClient([$this->jsonResponse(['status' => 'pending'], 202)], $history);
+        $client->invokeHiveAgent([
+            'hive_agent'   => 'agt_1',
+            'objective'    => 'Research competitors',
+            'callback_url' => 'https://example.com/cb',
+        ]);
+
+        $body = $this->requestBody($history);
+        $this->assertTrue($body['async']['enabled']);
+        $this->assertSame('https://example.com/cb', $body['async']['callback_url']);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/callback_url is required/');
+        $client->invokeHiveAgent([
+            'hive_agent'   => 'agt_1',
+            'objective'    => 'Research competitors',
+            'callback_url' => '',
+        ]);
+    }
+
+    public function testHA4_optionalSourcesAndMetadata(): void
+    {
+        $history = [];
+        $client  = $this->makeClient([
+            $this->jsonResponse(['status' => 'pending'], 202),
+            $this->jsonResponse(['status' => 'pending'], 202),
+        ], $history);
+
+        $client->invokeHiveAgent([
+            'hive_agent'   => 'agt_1',
+            'objective'    => 'Research competitors',
+            'callback_url' => 'https://example.com/cb',
+        ]);
+        $first = $this->requestBody($history, 0);
+        $this->assertArrayNotHasKey('sources', $first);
+        $this->assertArrayNotHasKey('metadata', $first);
+
+        $client->invokeHiveAgent([
+            'hive_agent'   => 'agt_1',
+            'objective'    => 'Research competitors',
+            'callback_url' => 'https://example.com/cb',
+            'sources'      => ['website_urls' => ['https://example.com']],
+            'metadata'     => ['customer_id' => 'cus_123'],
+        ]);
+        $second = $this->requestBody($history, 1);
+        $this->assertSame(['website_urls' => ['https://example.com']], $second['sources']);
+        $this->assertSame(['customer_id' => 'cus_123'], $second['metadata']);
+    }
+
+    public function testKB1_knowledgeBaseHelpers(): void
+    {
+        $history = [];
+        $client  = $this->makeClient([
+            $this->jsonResponse(['knowledge_bases' => []]),
+            $this->jsonResponse(['knowledge_base' => ['id' => 'kb_1']]),
+        ], $history);
+
+        $client->listKnowledgeBases('ws_1');
+        $client->createKnowledgeBase('ws_1', ['name' => 'KB']);
+        $this->assertSame('GET', $history[0]['request']->getMethod());
+        $this->assertStringContainsString('/public/workspaces/ws_1/knowledge_bases', (string) $history[0]['request']->getUri());
+        $this->assertSame('POST', $history[1]['request']->getMethod());
+    }
+
+    public function testKBI1_knowledgeBaseItemHelpers(): void
+    {
+        $history = [];
+        $client  = $this->makeClient([
+            $this->jsonResponse(['knowledge_base_items' => []]),
+            $this->jsonResponse(['request_id' => 'req_1']),
+        ], $history);
+
+        $client->listKnowledgeBaseItems('ws_1', 'kb_1');
+        $client->regenerateKnowledgeBaseItem('ws_1', 'kb_1', 'item_1');
+        $this->assertStringContainsString('/items', (string) $history[0]['request']->getUri());
+        $this->assertStringEndsWith('/regenerate', (string) $history[1]['request']->getUri());
+    }
+
+    public function testPA1_publicAgentHelpers(): void
+    {
+        $history = [];
+        $client  = $this->makeClient([$this->jsonResponse(['agents' => []])], $history);
+        $client->listAgents('ws_1');
+        $this->assertStringEndsWith('/agents', (string) $history[0]['request']->getUri());
+    }
+
+    public function testPAC1_agentChatHelpers(): void
+    {
+        $history = [];
+        $client  = $this->makeClient([
+            $this->jsonResponse(['chat' => ['id' => 'c1']]),
+            $this->jsonResponse(['message' => 'cleared']),
+        ], $history);
+
+        $client->createAgentChat('ws_1', 'agt_1', ['name' => 'Chat']);
+        $client->clearAgentChatMessages('ws_1', 'agt_1', 'cht_1');
+        $this->assertSame('POST', $history[0]['request']->getMethod());
+        $this->assertSame('PATCH', $history[1]['request']->getMethod());
+        $this->assertStringContainsString('/clear_messages', (string) $history[1]['request']->getUri());
+    }
+
+    public function testR1_getRequest(): void
+    {
+        $history = [];
+        $client  = $this->makeClient([$this->jsonResponse(['request' => ['id' => 'req_1']])], $history);
+        $result  = $client->getRequest('req_1');
+        $this->assertSame('GET', $history[0]['request']->getMethod());
+        $this->assertStringEndsWith('/public/requests/req_1', (string) $history[0]['request']->getUri());
+        $this->assertSame('req_1', $result['request']['id']);
     }
 
     // ── Streaming ─────────────────────────────────────────────────────────────
