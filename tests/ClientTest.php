@@ -396,6 +396,8 @@ final class ClientTest extends TestCase
         $first = $this->requestBody($history, 0);
         $this->assertArrayNotHasKey('sources', $first);
         $this->assertArrayNotHasKey('metadata', $first);
+        $this->assertArrayNotHasKey('unattended', $first);
+        $this->assertArrayNotHasKey('budget_policy', $first);
 
         $client->invokeHiveAgent([
             'hive_agent'   => 'agt_1',
@@ -403,10 +405,14 @@ final class ClientTest extends TestCase
             'callback_url' => 'https://example.com/cb',
             'sources'      => ['website_urls' => ['https://example.com']],
             'metadata'     => ['customer_id' => 'cus_123'],
+            'unattended'   => true,
+            'budget_policy' => 'stop',
         ]);
         $second = $this->requestBody($history, 1);
         $this->assertSame(['website_urls' => ['https://example.com']], $second['sources']);
         $this->assertSame(['customer_id' => 'cus_123'], $second['metadata']);
+        $this->assertTrue($second['unattended']);
+        $this->assertSame('stop', $second['budget_policy']);
     }
 
     public function testKB1_knowledgeBaseHelpers(): void
@@ -469,6 +475,36 @@ final class ClientTest extends TestCase
         $this->assertSame('GET', $history[0]['request']->getMethod());
         $this->assertStringEndsWith('/public/requests/req_1', (string) $history[0]['request']->getUri());
         $this->assertSame('req_1', $result['request']['id']);
+    }
+
+    public function testD1_getAgentDelegation(): void
+    {
+        $history = [];
+        $client  = $this->makeClient([$this->jsonResponse(['id' => 'del_1', 'status' => 'pending'])], $history);
+        $result  = $client->getAgentDelegation('del_1');
+        $this->assertSame('GET', $history[0]['request']->getMethod());
+        $this->assertStringEndsWith('/agent/delegations/del_1', (string) $history[0]['request']->getUri());
+        $this->assertSame('del_1', $result['id']);
+    }
+
+    public function testD2_cancelAgentDelegation(): void
+    {
+        $history = [];
+        $client  = $this->makeClient([$this->jsonResponse(['id' => 'del_1', 'status' => 'cancelled'])], $history);
+        $result  = $client->cancelAgentDelegation('del_1');
+        $this->assertSame('POST', $history[0]['request']->getMethod());
+        $this->assertStringEndsWith('/agent/delegations/del_1/cancel', (string) $history[0]['request']->getUri());
+        $this->assertSame('cancelled', $result['status']);
+    }
+
+    public function testD3_listThreadDelegations(): void
+    {
+        $history = [];
+        $client  = $this->makeClient([$this->jsonResponse(['delegations' => [['id' => 'del_1']]])], $history);
+        $result  = $client->listThreadDelegations('thread-1');
+        $this->assertSame('GET', $history[0]['request']->getMethod());
+        $this->assertStringEndsWith('/agent/threads/thread-1/delegations', (string) $history[0]['request']->getUri());
+        $this->assertSame('del_1', $result['delegations'][0]['id']);
     }
 
     // ── Streaming ─────────────────────────────────────────────────────────────

@@ -204,6 +204,9 @@ final class FetchHive
         if (isset($params['artifact_refs'])) {
             $body['artifact_refs'] = $params['artifact_refs'];
         }
+        if (isset($params['async'])) {
+            $body['async'] = $params['async'];
+        }
         return $this->post('/agent/invoke', $body);
     }
 
@@ -265,7 +268,9 @@ final class FetchHive
      *   objective: string,
      *   callback_url: string,
      *   sources?: array<string,mixed>,
-     *   metadata?: array<string,string|int|float|bool|null>
+     *   metadata?: array<string,string|int|float|bool|null>,
+     *   unattended?: bool,
+     *   budget_policy?: string
      * } $params
      * @return array<string,mixed>
      */
@@ -286,6 +291,12 @@ final class FetchHive
         if (isset($params['metadata'])) {
             $body['metadata'] = $params['metadata'];
         }
+        if (array_key_exists('unattended', $params)) {
+            $body['unattended'] = $params['unattended'];
+        }
+        if (isset($params['budget_policy'])) {
+            $body['budget_policy'] = $params['budget_policy'];
+        }
         return $this->post('/hive-agent/invoke', $body);
     }
 
@@ -295,6 +306,24 @@ final class FetchHive
     public function getRequest(string $id): array
     {
         return $this->request('GET', '/public/requests/' . $id);
+    }
+
+    /** @return array<string,mixed> */
+    public function getAgentDelegation(string $id): array
+    {
+        return $this->request('GET', '/agent/delegations/' . $id);
+    }
+
+    /** @return array<string,mixed> */
+    public function cancelAgentDelegation(string $id): array
+    {
+        return $this->post('/agent/delegations/' . $id . '/cancel', []);
+    }
+
+    /** @return array<string,mixed> */
+    public function listThreadDelegations(string $threadId): array
+    {
+        return $this->request('GET', '/agent/threads/' . $threadId . '/delegations');
     }
 
     /** @return array<string,mixed> */
