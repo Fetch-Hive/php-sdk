@@ -146,7 +146,7 @@ $client = new FetchHive();  // picks up FETCH_HIVE_API_KEY automatically
 
 ## Version
 
-0.2.9
+0.3.0
 
 ## License
 
