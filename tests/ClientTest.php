@@ -331,6 +331,7 @@ final class ClientTest extends TestCase
         $this->assertArrayNotHasKey('metadata', $body);
         $this->assertArrayNotHasKey('messages', $body);
         $this->assertArrayNotHasKey('attachments', $body);
+        $this->assertArrayNotHasKey('tool_approval', $body);
     }
 
     // ── Hive Agent ────────────────────────────────────────────────────────────
@@ -487,6 +488,56 @@ final class ClientTest extends TestCase
         $this->assertSame('del_1', $result['id']);
     }
 
+    public function testTA1_toolActionApprovalHelpers(): void
+    {
+        $history = [];
+        $client  = $this->makeClient([
+            $this->jsonResponse(['approvals' => []]),
+            $this->jsonResponse(['approval' => ['id' => 'appr_1']]),
+            $this->jsonResponse(['approval' => ['id' => 'appr_1']]),
+        ], $history);
+
+        $client->listToolActionApprovals('ws_1', ['status' => 'pending', 'agent_id' => 'agt_1', 'limit' => 10]);
+        $client->getToolActionApproval('ws_1', 'appr_1');
+        $client->decideToolActionApproval('ws_1', 'appr_1', 'allow_once');
+
+        $listUri = (string) $history[0]['request']->getUri();
+        $this->assertSame('GET', $history[0]['request']->getMethod());
+        $this->assertStringContainsString('/public/workspaces/ws_1/tool_action_approvals', $listUri);
+        $this->assertStringContainsString('status=pending', $listUri);
+        $this->assertStringContainsString('agent_id=agt_1', $listUri);
+        $this->assertStringContainsString('limit=10', $listUri);
+
+        $showUri = (string) $history[1]['request']->getUri();
+        $this->assertSame('GET', $history[1]['request']->getMethod());
+        $this->assertStringEndsWith('/tool_action_approvals/appr_1', $showUri);
+
+        $this->assertSame('POST', $history[2]['request']->getMethod());
+        $this->assertStringEndsWith('/tool_action_approvals/appr_1/decide', (string) $history[2]['request']->getUri());
+        $this->assertSame('allow_once', $this->requestBody($history, 2)['decision']);
+    }
+
+    public function testTA2_toolApprovalIncludedOnlyWhenProvided(): void
+    {
+        $history = [];
+        $client  = $this->makeClient([
+            $this->jsonResponse(['response' => 'ok']),
+            $this->jsonResponse(['response' => 'ok']),
+            $this->jsonResponse(['response' => 'ok']),
+            $this->jsonResponse(['response' => 'ok']),
+        ], $history);
+
+        $client->invokeAgent(['agent' => 'a', 'message' => 'm']);
+        $client->invokeWorkflow(['deployment' => 'd']);
+        $client->invokeAgent(['agent' => 'a', 'message' => 'm', 'tool_approval' => 'auto_approve']);
+        $client->invokeWorkflow(['deployment' => 'd', 'tool_approval' => 'policy']);
+
+        $this->assertArrayNotHasKey('tool_approval', $this->requestBody($history, 0));
+        $this->assertArrayNotHasKey('tool_approval', $this->requestBody($history, 1));
+        $this->assertSame('auto_approve', $this->requestBody($history, 2)['tool_approval']);
+        $this->assertSame('policy', $this->requestBody($history, 3)['tool_approval']);
+    }
+
     public function testD2_cancelAgentDelegation(): void
     {
         $history = [];
@@ -543,11 +594,13 @@ final class ClientTest extends TestCase
             'agent' => 'ag',
             'message' => 'hi',
             'metadata' => ['plan' => 'enterprise'],
+            'tool_approval' => 'auto_approve',
         ]), false);
 
         $body = $this->requestBody($history);
         $this->assertTrue($body['streaming']);
         $this->assertSame(['plan' => 'enterprise'], $body['metadata']);
+        $this->assertSame('auto_approve', $body['tool_approval']);
         $this->assertCount(2, $events);
         $this->assertSame('response', $events[0]['type']);
     }

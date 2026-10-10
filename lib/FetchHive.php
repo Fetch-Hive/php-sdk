@@ -129,7 +129,8 @@ final class FetchHive
      *   async_mode?: bool,
      *   callback_url?: string,
      *   user?: string,
-     *   metadata?: array<string,string|int|float|bool|null>
+     *   metadata?: array<string,string|int|float|bool|null>,
+     *   tool_approval?: string
      * } $params
      * @return array<string,mixed>
      */
@@ -147,6 +148,9 @@ final class FetchHive
         }
         if (isset($params['metadata'])) {
             $body['metadata'] = $params['metadata'];
+        }
+        if (isset($params['tool_approval'])) {
+            $body['tool_approval'] = $params['tool_approval'];
         }
         if (!empty($params['async_mode'])) {
             $body['async'] = ['enabled' => true];
@@ -172,7 +176,8 @@ final class FetchHive
      *   image_urls?: string[],
      *   attachments?: array<int,string|array<string,mixed>>,
      *   known_artifact_refs?: string[],
-     *   artifact_refs?: string[]
+     *   artifact_refs?: string[],
+     *   tool_approval?: string
      * } $params
      * @return array<string,mixed>
      */
@@ -204,6 +209,9 @@ final class FetchHive
         if (isset($params['artifact_refs'])) {
             $body['artifact_refs'] = $params['artifact_refs'];
         }
+        if (isset($params['tool_approval'])) {
+            $body['tool_approval'] = $params['tool_approval'];
+        }
         if (isset($params['async'])) {
             $body['async'] = $params['async'];
         }
@@ -223,7 +231,8 @@ final class FetchHive
      *   image_urls?: string[],
      *   attachments?: array<int,string|array<string,mixed>>,
      *   known_artifact_refs?: string[],
-     *   artifact_refs?: string[]
+     *   artifact_refs?: string[],
+     *   tool_approval?: string
      * } $params
      * @return Generator<array<string,mixed>>
      */
@@ -254,6 +263,9 @@ final class FetchHive
         }
         if (isset($params['artifact_refs'])) {
             $body['artifact_refs'] = $params['artifact_refs'];
+        }
+        if (isset($params['tool_approval'])) {
+            $body['tool_approval'] = $params['tool_approval'];
         }
         yield from $this->postStream('/agent/invoke', $body);
     }
@@ -324,6 +336,46 @@ final class FetchHive
     public function listThreadDelegations(string $threadId): array
     {
         return $this->request('GET', '/agent/threads/' . $threadId . '/delegations');
+    }
+
+    /**
+     * List tool-action approvals. The server defaults status to pending.
+     *
+     * @param array{status?: string, agent_id?: string, run_id?: string, request_id?: string, cursor?: string, limit?: int} $params
+     * @return array<string,mixed>
+     */
+    public function listToolActionApprovals(string $workspaceId, array $params = []): array
+    {
+        $path = '/public/workspaces/' . $workspaceId . '/tool_action_approvals';
+        $query = [];
+        foreach (['status', 'agent_id', 'run_id', 'request_id', 'cursor', 'limit'] as $key) {
+            if (array_key_exists($key, $params) && $params[$key] !== null) {
+                $query[$key] = $params[$key];
+            }
+        }
+        if ($query !== []) {
+            $path .= '?' . http_build_query($query);
+        }
+        return $this->request('GET', $path);
+    }
+
+    /** @return array<string,mixed> */
+    public function getToolActionApproval(string $workspaceId, string $id): array
+    {
+        return $this->request('GET', '/public/workspaces/' . $workspaceId . '/tool_action_approvals/' . $id);
+    }
+
+    /**
+     * Decide a tool-action approval. $decision is allow_once or deny.
+     * An API-key run resumes on the server after this call.
+     *
+     * @return array<string,mixed>
+     */
+    public function decideToolActionApproval(string $workspaceId, string $id, string $decision): array
+    {
+        return $this->post('/public/workspaces/' . $workspaceId . '/tool_action_approvals/' . $id . '/decide', [
+            'decision' => $decision,
+        ]);
     }
 
     /** @return array<string,mixed> */
