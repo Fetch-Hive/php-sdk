@@ -93,6 +93,20 @@ $checkpoint = $client->getPipelineCheckpoint($run['id']);
 $client->answerPipelineCheckpoint($run['id'], ['answer' => ['approved' => true]]);
 ```
 
+Building an app on a pipeline template? Set it up in your workspace, read its start inputs and estimated cost, and follow runs by polling, with checkpoint emails off because your app shows them:
+
+```php
+$client->installPipelineTemplate('TEMPLATE_ID'); // same pipeline back on later calls
+$definition = $client->getPipelineDeployment('seo-article');
+$run = $client->invokePipeline([
+    'deployment'         => 'seo-article',
+    'inputs'             => ['keyword' => 'running shoes'],
+    'poll'               => true,
+    'notify_checkpoints' => false,
+])['pipeline_run'];
+$history = $client->listPipelineRuns(['deployment' => 'seo-article', 'per_page' => 10]);
+```
+
 ## Invoke an agent
 
 ```php
@@ -185,7 +199,7 @@ $client = new FetchHive();  // picks up FETCH_HIVE_API_KEY automatically
 
 ## Version
 
-0.5.0
+0.6.0
 
 ## License
 

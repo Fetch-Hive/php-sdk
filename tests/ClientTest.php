@@ -249,6 +249,45 @@ final class ClientTest extends TestCase
         ], $seen);
     }
 
+    // PL3 — a polled run without a callback, checkpoint messages off
+    public function testPL3_pollWithoutCallback(): void
+    {
+        $history = [];
+        $client  = $this->makeClient([$this->jsonResponse(['pipeline_run' => ['id' => 'run_2']])], $history);
+        $client->invokePipeline([
+            'deployment'         => 'seo-article',
+            'inputs'             => ['keyword' => 'shoes'],
+            'poll'               => true,
+            'notify_checkpoints' => false,
+        ]);
+
+        $body = $this->requestBody($history);
+        $this->assertFalse($body['notify_checkpoints']);
+        $this->assertSame(['enabled' => true, 'callback_url' => null, 'poll' => true], $body['async']);
+    }
+
+    // PL4 — template install, definition and run list paths
+    public function testPL4_templateAndHistoryPaths(): void
+    {
+        $history = [];
+        $client  = $this->makeClient(array_fill(0, 4, $this->jsonResponse([])), $history);
+        $client->installPipelineTemplate('tpl_1');
+        $client->getPipeline('pipe_1');
+        $client->getPipelineDeployment('seo-article', 'staging');
+        $client->listPipelineRuns(['deployment' => 'seo-article', 'status' => 'completed', 'per_page' => 10]);
+
+        $seen = array_map(
+            fn ($entry) => $entry['request']->getMethod() . ' ' . preg_replace('#^.*/v1#', '', (string) $entry['request']->getUri()),
+            $history
+        );
+        $this->assertSame([
+            'POST /pipeline/templates/tpl_1/install',
+            'GET /pipeline/pipelines/pipe_1',
+            'GET /pipeline/deployments/seo-article?variant=staging',
+            'GET /pipeline/runs?deployment=seo-article&status=completed&per_page=10',
+        ], $seen);
+    }
+
     // ── Workflow ──────────────────────────────────────────────────────────────
 
     // W1 — invokeWorkflow POSTs to /workflow/invoke

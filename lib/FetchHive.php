@@ -164,11 +164,15 @@ final class FetchHive
     // ── Pipeline ────────────────────────────────────────────────────────────────
 
     /**
-     * Start a pipeline run. Always asynchronous: the result goes to callback_url. Name a deployment (and
-     * optionally a variant), or a pipeline id to run its default variant. Returns ['pipeline_run' => [...]].
+     * Start a pipeline run. Always asynchronous: the result goes to callback_url, or with 'poll' => true you
+     * follow it with getPipelineRun and getPipelineCheckpoint. 'notify_checkpoints' => false sends no checkpoint
+     * email or Telegram message, for an app that shows checkpoints itself. Name a deployment (and optionally a
+     * variant), or a pipeline id to run its default variant. Returns ['pipeline_run' => [...]].
      *
      * @param array{
-     *   callback_url: string,
+     *   callback_url?: string,
+     *   poll?: bool,
+     *   notify_checkpoints?: bool,
      *   deployment?: string,
      *   variant?: string,
      *   pipeline?: string,
@@ -179,13 +183,62 @@ final class FetchHive
     public function invokePipeline(array $params): array
     {
         $body = [];
-        foreach (['deployment', 'variant', 'pipeline', 'inputs', 'max_spend_usd'] as $key) {
+        foreach (['deployment', 'variant', 'pipeline', 'inputs', 'max_spend_usd', 'notify_checkpoints'] as $key) {
             if (isset($params[$key])) {
                 $body[$key] = $params[$key];
             }
         }
-        $body['async'] = ['enabled' => true, 'callback_url' => $params['callback_url']];
+        $async = ['enabled' => true, 'callback_url' => $params['callback_url'] ?? null];
+        if (!empty($params['poll'])) {
+            $async['poll'] = true;
+        }
+        $body['async'] = $async;
         return $this->post('/pipeline/invoke', $body);
+    }
+
+    /**
+     * Set a pipeline template up in this API key's workspace and deploy it. Safe to call before every run: when
+     * the workspace has it already, the same pipeline and deployment come back with 'installed' => false.
+     *
+     * @param array{deployment?: string} $params
+     */
+    public function installPipelineTemplate(string $templateId, array $params = []): array
+    {
+        $body = isset($params['deployment']) ? ['deployment' => $params['deployment']] : [];
+        return $this->post('/pipeline/templates/' . rawurlencode($templateId) . '/install', $body);
+    }
+
+    /** A deployed pipeline's start inputs, stages, checkpoints and estimated cost per run. */
+    public function getPipeline(string $pipelineId, ?string $variant = null): array
+    {
+        return $this->request('GET', self::pipelineQuery('/pipeline/pipelines/' . rawurlencode($pipelineId), ['variant' => $variant]));
+    }
+
+    /** The same as getPipeline, by deployment key. */
+    public function getPipelineDeployment(string $deployment, ?string $variant = null): array
+    {
+        return $this->request('GET', self::pipelineQuery('/pipeline/deployments/' . rawurlencode($deployment), ['variant' => $variant]));
+    }
+
+    /**
+     * Earlier pipeline runs, newest first, with their start inputs. per_page is up to 50.
+     *
+     * @param array{pipeline?: string, deployment?: string, status?: string, page?: int, per_page?: int} $params
+     */
+    public function listPipelineRuns(array $params = []): array
+    {
+        $query = [];
+        foreach (['pipeline', 'deployment', 'status', 'page', 'per_page'] as $key) {
+            $query[$key] = $params[$key] ?? null;
+        }
+        return $this->request('GET', self::pipelineQuery('/pipeline/runs', $query));
+    }
+
+    /** @param array<string, string|int|null> $query */
+    private static function pipelineQuery(string $path, array $query): string
+    {
+        $present = array_filter($query, static fn ($value) => $value !== null && $value !== '');
+        return $present === [] ? $path : $path . '?' . http_build_query($present);
     }
 
     public function getPipelineRun(string $runId): array
