@@ -161,6 +161,65 @@ final class FetchHive
         return $this->post('/workflow/invoke', $body);
     }
 
+    // ── Pipeline ────────────────────────────────────────────────────────────────
+
+    /**
+     * Start a pipeline run. Always asynchronous: the result goes to callback_url. Name a deployment (and
+     * optionally a variant), or a pipeline id to run its default variant. Returns ['pipeline_run' => [...]].
+     *
+     * @param array{
+     *   callback_url: string,
+     *   deployment?: string,
+     *   variant?: string,
+     *   pipeline?: string,
+     *   inputs?: array<string,mixed>,
+     *   max_spend_usd?: float
+     * } $params
+     */
+    public function invokePipeline(array $params): array
+    {
+        $body = [];
+        foreach (['deployment', 'variant', 'pipeline', 'inputs', 'max_spend_usd'] as $key) {
+            if (isset($params[$key])) {
+                $body[$key] = $params[$key];
+            }
+        }
+        $body['async'] = ['enabled' => true, 'callback_url' => $params['callback_url']];
+        return $this->post('/pipeline/invoke', $body);
+    }
+
+    public function getPipelineRun(string $runId): array
+    {
+        return $this->request('GET', '/pipeline/runs/' . rawurlencode($runId));
+    }
+
+    /** What the run is waiting for at a checkpoint, and the answer shape to send. */
+    public function getPipelineCheckpoint(string $runId): array
+    {
+        return $this->request('GET', '/pipeline/runs/' . rawurlencode($runId) . '/checkpoint');
+    }
+
+    /**
+     * Answer the checkpoint a run is waiting at.
+     *
+     * @param array{answer: array<string,mixed>, request_id?: string, node_key?: string} $params
+     */
+    public function answerPipelineCheckpoint(string $runId, array $params): array
+    {
+        $body = ['answer' => $params['answer']];
+        foreach (['request_id', 'node_key'] as $key) {
+            if (isset($params[$key])) {
+                $body[$key] = $params[$key];
+            }
+        }
+        return $this->post('/pipeline/runs/' . rawurlencode($runId) . '/checkpoint/answer', $body);
+    }
+
+    public function cancelPipelineRun(string $runId): array
+    {
+        return $this->post('/pipeline/runs/' . rawurlencode($runId) . '/cancel', []);
+    }
+
     // ── Agent ───────────────────────────────────────────────────────────────────
 
     /**

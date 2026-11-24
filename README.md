@@ -75,6 +75,24 @@ $run = $client->invokeWorkflow([
 echo 'Queued: ' . $run['run_id'];
 ```
 
+## Run a pipeline
+
+A pipeline runs several workflows in a row and can stop at checkpoints for a person, so a run is always asynchronous: the call returns at once and the result is sent to your callback URL.
+
+```php
+$run = $client->invokePipeline([
+    'deployment'   => 'seo-article',
+    'variant'      => 'production',
+    'inputs'       => ['keyword' => 'running shoes'],
+    'callback_url' => 'https://example.com/hooks/pipeline',
+])['pipeline_run'];
+
+$status = $client->getPipelineRun($run['id']);
+// At a checkpoint: read what it asks, then send the person's answer.
+$checkpoint = $client->getPipelineCheckpoint($run['id']);
+$client->answerPipelineCheckpoint($run['id'], ['answer' => ['approved' => true]]);
+```
+
 ## Invoke an agent
 
 ```php
@@ -167,7 +185,7 @@ $client = new FetchHive();  // picks up FETCH_HIVE_API_KEY automatically
 
 ## Version
 
-0.4.1
+0.5.0
 
 ## License
 

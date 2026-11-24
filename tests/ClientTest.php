@@ -205,6 +205,50 @@ final class ClientTest extends TestCase
         );
     }
 
+    // ── Pipeline ──────────────────────────────────────────────────────────────
+
+    // PL1 — invokePipeline is always async with the callback
+    public function testPL1_invokePipelineIsAsync(): void
+    {
+        $history = [];
+        $client  = $this->makeClient([$this->jsonResponse(['pipeline_run' => ['id' => 'run_1']])], $history);
+        $result  = $client->invokePipeline([
+            'deployment'   => 'seo-article',
+            'variant'      => 'staging',
+            'inputs'       => ['keyword' => 'shoes'],
+            'callback_url' => 'https://cb.example.com',
+        ]);
+
+        $this->assertStringEndsWith('/pipeline/invoke', (string) $history[0]['request']->getUri());
+        $body = $this->requestBody($history);
+        $this->assertSame('seo-article', $body['deployment']);
+        $this->assertSame('staging', $body['variant']);
+        $this->assertSame(['enabled' => true, 'callback_url' => 'https://cb.example.com'], $body['async']);
+        $this->assertSame('run_1', $result['pipeline_run']['id']);
+    }
+
+    // PL2 — run, checkpoint, answer and cancel paths
+    public function testPL2_pipelineRunPaths(): void
+    {
+        $history = [];
+        $client  = $this->makeClient(array_fill(0, 4, $this->jsonResponse([])), $history);
+        $client->getPipelineRun('run_1');
+        $client->getPipelineCheckpoint('run_1');
+        $client->answerPipelineCheckpoint('run_1', ['answer' => ['approved' => true], 'request_id' => 'cp_1']);
+        $client->cancelPipelineRun('run_1');
+
+        $seen = array_map(
+            fn ($entry) => $entry['request']->getMethod() . ' ' . preg_replace('#^.*/v1#', '', (string) $entry['request']->getUri()),
+            $history
+        );
+        $this->assertSame([
+            'GET /pipeline/runs/run_1',
+            'GET /pipeline/runs/run_1/checkpoint',
+            'POST /pipeline/runs/run_1/checkpoint/answer',
+            'POST /pipeline/runs/run_1/cancel',
+        ], $seen);
+    }
+
     // ── Workflow ──────────────────────────────────────────────────────────────
 
     // W1 — invokeWorkflow POSTs to /workflow/invoke
