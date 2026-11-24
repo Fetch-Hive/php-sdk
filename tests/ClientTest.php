@@ -249,6 +249,20 @@ final class ClientTest extends TestCase
         ], $seen);
     }
 
+    // PL4 — re-run plan, then a confirmed re-run
+    public function testPL4_pipelineRevisions(): void
+    {
+        $history = [];
+        $client  = $this->makeClient(array_fill(0, 2, $this->jsonResponse([])), $history);
+        $client->planPipelineRevision('run_1', ['rerun' => ['write']]);
+        $client->createPipelineRevision('run_1', ['changes' => ['rerun' => ['write']], 'confirmed' => true]);
+
+        $this->assertStringEndsWith('/pipeline/runs/run_1/revisions/plan', (string) $history[0]['request']->getUri());
+        $this->assertSame(['changes' => ['rerun' => ['write']]], json_decode((string) $history[0]['request']->getBody(), true));
+        $this->assertStringEndsWith('/pipeline/runs/run_1/revisions', (string) $history[1]['request']->getUri());
+        $this->assertSame(['changes' => ['rerun' => ['write']], 'confirmed' => true], json_decode((string) $history[1]['request']->getBody(), true));
+    }
+
     // PL3 — a polled run without a callback, checkpoint messages off
     public function testPL3_pollWithoutCallback(): void
     {

@@ -273,6 +273,32 @@ final class FetchHive
         return $this->post('/pipeline/runs/' . rawurlencode($runId) . '/cancel', []);
     }
 
+    /**
+     * What a re-run with these changes would reuse and run, and its cost. Starts nothing.
+     *
+     * @param array<string,mixed> $changes
+     */
+    public function planPipelineRevision(string $runId, array $changes): array
+    {
+        return $this->post('/pipeline/runs/' . rawurlencode($runId) . '/revisions/plan', ['changes' => $changes]);
+    }
+
+    /**
+     * Re-run a finished run with changes. Send confirmed => true once the person agreed to the plan's cost.
+     *
+     * @param array{changes: array<string,mixed>, confirmed?: bool, callback_url?: string, max_spend_usd?: float} $params
+     */
+    public function createPipelineRevision(string $runId, array $params): array
+    {
+        $body = ['changes' => $params['changes'], 'confirmed' => (bool) ($params['confirmed'] ?? false)];
+        foreach (['callback_url', 'max_spend_usd'] as $key) {
+            if (isset($params[$key])) {
+                $body[$key] = $params[$key];
+            }
+        }
+        return $this->post('/pipeline/runs/' . rawurlencode($runId) . '/revisions', $body);
+    }
+
     // ── Agent ───────────────────────────────────────────────────────────────────
 
     /**

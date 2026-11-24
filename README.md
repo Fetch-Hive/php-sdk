@@ -107,6 +107,13 @@ $run = $client->invokePipeline([
 $history = $client->listPipelineRuns(['deployment' => 'seo-article', 'per_page' => 10]);
 ```
 
+Re-run from a changed answer or a failed stage: plan first (shows what runs again and its cost), then confirm:
+
+```php
+$plan = $client->planPipelineRevision($runId, ['rerun' => ['write']]);
+$client->createPipelineRevision($runId, ['changes' => ['rerun' => ['write']], 'confirmed' => true]);
+```
+
 ## Invoke an agent
 
 ```php
@@ -199,7 +206,7 @@ $client = new FetchHive();  // picks up FETCH_HIVE_API_KEY automatically
 
 ## Version
 
-0.6.0
+0.6.1
 
 ## License
 
